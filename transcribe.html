@@ -1,0 +1,319 @@
+<!doctype html>
+<head>
+<meta http-equiv="content-type" content="text/html; charset=utf-8">
+<title>Transcribe Offline An Audio / Video</title>
+</head>
+
+<style>
+html, body {
+	background-color:#eee;
+	font-family: helvetica neue, arial;
+	font-size:14px;
+	}
+h3 {
+	padding:5px;
+}
+#transcript {
+	padding-left:10px;
+	padding-right:10px;
+	font-size:12px;
+	background-color:white;
+	width:425px;
+	height:250px;
+	overflow:auto;
+	border:1px solid #aaaaaa;
+	border-radius: 5px;
+}
+.center {
+	width:900px;
+	margin: 0 auto;
+}
+.footer {
+	font-size:12px; color:#1e1e1e;
+}
+.footer a {
+	color:royalblue;
+}
+code {
+	color:darkred;
+}
+</style>
+<body>
+
+<div class="center">
+
+	<h3 style='background:#ccc'>Transcribe Audio / Video</h3>
+
+	<div id="message" style='display:none;'></div>
+
+	<div style="width:400px;float:left;">
+		<video width=400 height=225 controls="true" autoplay id="player"></video>
+
+		<div id="controls" style='display:none;'>
+			<input type="button" id="btn_playpause" value="ll" onclick="playpause();">
+			<input type="button" id="btn_rewind" value="&laquo; 3" onclick="fwdrewind('rewind');">
+			<input type="button" id="btn_forward" value="3 &raquo;" onclick="fwdrewind('forward');">
+			<input type=button value='Slow' onClick="speed('slow');">
+			<input type=button value='Fast' onClick="speed('fast');">
+			<input type=button value="1" id="btn_speed">
+
+			<input type="button" id="btn_time" value="">
+		</div> <!-- /#controls -->
+
+		<P>
+		Select an Audio/Video file: <input id="btn_file" type="file"> 
+	</div>
+
+	<div style="width:450px;float:right;">
+		<div id="transcript" contenteditable='true' onkeyup='addData()'></div>
+
+		<input type=button value='Download Transcript' onClick="download('transcript.html','transcript','text/html');">
+	</div>
+	
+	<div style='clear:both;'></div>
+
+	<P>&nbsp;</P>
+	<hr size=1>
+	<div class="footer">
+	<strong>Shortcuts (toggle between Ctrl &amp; Command key between Windows &amp; Mac)</strong>
+	<ul>
+		<li> <code>CTRL + Up/Down Arrow</code> <tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Increase/Decrease Speed</tt>
+		<li> <code>CTRL + Left/Right Arrow</code> <tt>&nbsp;&nbsp;Go Back/Move Forward 3 Seconds</tt>
+		<li> <code>CTRL + .</code> <tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Insert Timestamp</tt>
+		<li> <code>CTRL + Esc</code> <tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Play/Pause Toggle</tt>
+	</ul>
+	<P>&nbsp;</P>
+	&copy; Vivek Kapoor &#149; <a href="https://exain.wordpress.com">https://exain.wordpress.com</a>
+	</div>
+
+</div>
+
+
+<script>
+
+function addData() {
+	localStorage.setItem("transcription", document.getElementById('transcript').innerHTML );
+}
+
+function loadData() {
+	document.getElementById('transcript').innerHTML = localStorage.getItem("transcription");
+}
+
+function playpause() {
+	var player = document.getElementById('player');
+	var btn = document.getElementById('btn_playpause');
+	if (player.paused) {
+		btn.value = "ll";
+		player.play();
+	} else {
+		btn.value = "►";
+		player.pause();
+	}
+}
+
+function fwdrewind(activity) {
+	var player = document.getElementById('player');
+	var currentTime = player.currentTime;
+
+	if (activity == "rewind") {
+	player.currentTime = currentTime - 3;
+	} else if (activity == "forward") {
+	player.currentTime = currentTime + 3;
+	}
+}
+
+function showtime() {
+	// only start showing once file is loaded
+	var controls = document.getElementById('controls');
+	var btn_file = document.getElementById('btn_file');
+	if (btn_file.value != "") {
+		controls.style.display = 'block';
+	}
+	var player = document.getElementById('player');
+	var btn = document.getElementById('btn_time');
+
+	// Show the time
+	setInterval(function(){ btn.value = formatSecondsAsTime(player.currentTime); },200);
+}
+
+function speed(activity) {
+
+	var player = document.getElementById('player');
+	var btn = document.getElementById('btn_speed');
+
+	if (activity == 'slow') {
+		btn.value = btn.value - 0.25;
+	} else if (activity == 'fast') {
+		btn.value = parseFloat(btn.value) + 0.25;
+	}
+	if (btn.value < 0.25) { btn.value = 0.25; }
+	if (btn.value > 8) { btn.value = 8; }
+
+	player.playbackRate = btn.value;
+}
+
+function download(filename, elId, mimeType) {
+    var elHtml = document.getElementById(elId).innerHTML;
+    var link = document.createElement('a');
+    mimeType = mimeType || 'text/plain';
+
+	var data = encodeURIComponent(elHtml);
+	//console.log(data);
+
+	document.body.appendChild(link);
+	link.setAttribute("type","hidden");
+	link.download = filename;
+	link.href = 'data:'+mimeType+';charset=utf-8,' + data;
+	link.click();
+
+}
+
+function setCurrent(value) {
+	var player = document.getElementById('player');
+	player.currentTime = value;
+}
+
+function timeUpdate() {
+
+	var player = document.getElementById('player');
+	//player.pause();
+	//console.log(player);
+
+	var cueTime = player.currentTime;
+
+	//insertTextAtCursor("\n<a href='javascript:setCurrent(" + cueTime + ")'>[" + cueTime + "]</a> ") ;
+	insertTextAtCursor(cueTime) ;
+	addData();
+}
+
+function createTimeStamp(cueTime) {
+	var element = document.createElement("a");
+	element.setAttribute('href', "javascript:setCurrent("+cueTime+")");
+	element.setAttribute('onclick', "javascript:setCurrent("+cueTime+")");
+	element.setAttribute('style', "cursor:pointer");
+	element.innerHTML = "["+cueTime+"]";
+	return element;
+}
+
+function insertTextAtCursor(text) {
+    var sel, range, html;
+    if (window.getSelection) {
+        sel = window.getSelection();
+        if (sel.getRangeAt && sel.rangeCount) {
+            range = sel.getRangeAt(0);
+            range.deleteContents();
+	    var textNode = createTimeStamp(text);
+            range.insertNode( textNode );
+	    range.setStartAfter(textNode);
+        }
+    } else if (document.selection && document.selection.createRange) {
+        document.selection.createRange().text = text;
+    }
+}
+
+(function localFileVideoPlayer() {
+	'use strict'
+  var URL = window.URL || window.webkitURL
+  var displayMessage = function (message, isError) {
+    var element = document.querySelector('#message')
+    element.innerHTML = message
+    element.className = isError ? 'error' : 'info'
+  }
+  var playSelectedFile = function (event) {
+    var file = this.files[0]
+    var type = file.type
+
+    var videoNode = document.querySelector('video');
+
+    var canPlay = videoNode.canPlayType(type)
+    if (canPlay === '') canPlay = 'no'
+    var message = 'Can play type "' + type + '": ' + canPlay
+    var isError = canPlay === 'no'
+    displayMessage(message, isError)
+
+    if (isError) {
+      return
+    }
+
+    var fileURL = URL.createObjectURL(file)
+    videoNode.src = fileURL
+ 
+    showtime();
+  }
+  var inputNode = document.getElementById('btn_file'); //document.querySelector('input')
+  inputNode.addEventListener('change', playSelectedFile, false);
+})()
+
+
+// Auto Load Data the first time
+loadData();
+
+// Capture Keystrokes
+document.onkeydown = function(evt) {
+    evt = evt || window.event;
+
+	if (evt.target.tagName == "DIV") {
+
+		var keyCode = evt.keyCode;
+		var cmd_held = evt.metaKey;
+		var ctrl_held = evt.ctrlKey;
+
+		if (cmd_held && keyCode == "190") {
+			evt.preventDefault();
+			timeUpdate();
+		}
+
+		if (keyCode == "27") {
+			evt.preventDefault();
+			playpause();
+		}
+
+		if (cmd_held && keyCode == "37") {
+			evt.preventDefault();
+			fwdrewind('rewind');
+		}
+		if (cmd_held && keyCode == "39") {
+			evt.preventDefault();
+			fwdrewind('forward');
+		}
+		if (cmd_held && keyCode == "38") {
+			evt.preventDefault();
+			speed('fast');
+		}
+		if (cmd_held && keyCode == "40") {
+			evt.preventDefault();
+			speed('slow');
+		}
+	
+	}
+
+};
+
+function formatSecondsAsTime(secs) {
+  var hr  = Math.floor(secs / 3600);
+  var min = Math.floor((secs - (hr * 3600))/60);
+  var sec = Math.floor(secs - (hr * 3600) -  (min * 60));
+
+  if (hr < 10) {
+   hr = "0" + hr;
+  }
+  if (min < 10){ 
+    min = "0" + min; 
+  }
+  if (sec < 10){ 
+    sec  = "0" + sec;
+  }
+
+  return hr + ":" + min + ':' + sec;
+}
+
+document.getElementById('player').addEventListener('ended',playerended,false);
+document.getElementById("btn_file").value = "";
+function playerended() {
+	var btn = document.getElementById('btn_playpause');
+	btn.value = "►";
+}
+
+</script>
+</body>
+</html>
